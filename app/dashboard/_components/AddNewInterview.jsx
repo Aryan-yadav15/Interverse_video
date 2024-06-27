@@ -61,13 +61,21 @@ const AddNewInterview = () => {
 
             if (result.response && result.response.candidates && result.response.candidates.length > 0) {
                 let text = result.response.candidates[0].content.parts[0].text;
-                text = text.replace('```json', '').replace('```', '').trim();
+                console.log('Original Text:', text);  // Log the original text for debugging
+
+                // Clean the text
+                text = text.replace(/```json/g, '').replace(/```/g, '').trim();
                 console.log('Cleaned Text:', text);  // Log the cleaned text for debugging
 
+                // Add commas between question and answer if missing
+                text = text.replace(/(\d})\s*("answer")/g, '$1,$2');  // Add commas before "answer" if missing
+                console.log('Corrected Text:', text);  // Log the corrected text for debugging
+
+                // Attempt to parse the JSON
                 try {
                     const parsedResponse = JSON.parse(text);
                     setResponseContent(JSON.stringify(parsedResponse, null, 2));
-                    setJsonResponse(text)
+                    setJsonResponse(text);
 
                     if (text) {
                         const resp = await db.insert(InterVerseDB)
@@ -79,30 +87,31 @@ const AddNewInterview = () => {
                                 jobExperience: jobExp,
                                 createdBy: user?.primaryEmailAddress.emailAddress,
                                 createdAt: moment().format('DD-MM-YYYY')
-                            }).returning({ mockId: InterVerseDB.mockId })
+                            }).returning({ mockId: InterVerseDB.mockId });
 
-                        console.log("inserted id:", resp)
+                        console.log("Inserted ID:", resp);
+
                         if (resp) {
-                            setOpenDialog(false)
-                            router.push('/dashboard/interview/'+resp[0]?.mockId)
+                            setOpenDialog(false);
+                            router.push('/dashboard/interview/' + resp[0]?.mockId);
                         }
-
                     } else {
-                        console.error("No response found")
+                        console.error("No response found");
                     }
 
                     console.log(jsonResponse);
                 } catch (jsonError) {
                     console.error("Error parsing JSON:", jsonError);
+                    console.error("Problematic Text:", text);  // Log the problematic text for further analysis
                 } finally {
-                    setLoading(false)
+                    setLoading(false);
                 }
-            } else {
-                console.warn("No candidates found in the response");
             }
         } catch (error) {
             console.error("Error sending message:", error);
+            setLoading(false);
         }
+
     };
 
     return (
